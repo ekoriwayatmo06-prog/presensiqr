@@ -7,27 +7,18 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Menggunakan Html5-Qrcode sebagai alternatif yang lebih stabil dan modern -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        /* Preview container styling */
         #reader { width: 100%; border: none !important; border-radius: 12px; overflow: hidden; background-color: #000; }
-        #reader video { border-radius: 12px; object-fit: cover; }
-        /* Custom scrollbar untuk list pencarian */
-        #manual-search-results::-webkit-scrollbar { width: 4px; }
-        #manual-search-results::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        #reader video { border-radius: 12px; object-fit: cover; width: 100% !important; height: 100% !important; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen pb-20">
 
-    <!-- Elemen Tersembunyi untuk Pemrosesan QR -->
-    <div id="qr-hidden-container" class="hidden"></div>
-
-    <!-- Header -->
     <header class="bg-blue-600 text-white p-4 sticky top-0 z-50 shadow-md">
         <div class="flex justify-between items-center">
             <h1 class="text-xl font-bold flex items-center gap-2">
@@ -37,56 +28,73 @@
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="p-4 max-w-4xl mx-auto">
         
-        <!-- Tab: Beranda / Scan -->
+        <!-- TAB SCAN -->
         <section id="scan" class="tab-content active">
             <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 border border-slate-200 text-center">
-                <h2 class="text-lg font-semibold mb-4 text-slate-700">Scan QR Code Siswa</h2>
-                <div class="relative bg-black rounded-xl overflow-hidden mb-4 aspect-video flex items-center justify-center">
-                    <!-- Container Scanner -->
-                    <div id="reader"></div>
-                    
-                    <div id="camera-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 text-white z-10">
-                        <i data-lucide="loader-2" class="animate-spin mb-2"></i>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-slate-700">Scan QR Code</h2>
+                    <!-- Fitur Pilih Kamera -->
+                    <select id="camera-selection" class="text-[10px] p-2 border rounded-lg bg-slate-50 outline-none max-w-[160px]" onchange="changeCamera(this.value)">
+                        <option value="">Mencari Kamera...</option>
+                    </select>
+                </div>
+                
+                <div class="relative bg-black rounded-xl overflow-hidden mb-4 aspect-square md:aspect-video flex items-center justify-center">
+                    <div id="reader" style="z-index: 1;"></div>
+                    <div id="camera-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 text-white z-20">
+                        <i data-lucide="loader-2" class="animate-spin mb-2 text-blue-400"></i>
                         <span class="text-xs">Menyiapkan Kamera...</span>
                     </div>
                 </div>
-                <p class="text-sm text-slate-500">Arahkan kamera ke kartu QR siswa</p>
-                <div id="scan-feedback" class="mt-4 p-3 rounded-lg hidden"></div>
+                <div id="scan-feedback" class="mt-4 p-3 rounded-lg hidden text-sm font-bold animate-bounce"></div>
             </div>
             
             <div class="grid grid-cols-2 gap-4">
-                <button onclick="switchTab('manual')" class="bg-amber-500 text-white p-4 rounded-xl flex flex-col items-center gap-2 shadow-sm">
+                <button onclick="switchTab('manual')" class="bg-amber-500 text-white p-4 rounded-xl flex flex-col items-center gap-2 shadow-sm active:scale-95 transition-transform">
                     <i data-lucide="user-plus"></i>
                     <span class="text-sm font-medium">Input Manual</span>
                 </button>
-                <button onclick="switchTab('laporan')" class="bg-indigo-500 text-white p-4 rounded-xl flex flex-col items-center gap-2 shadow-sm">
+                <button onclick="switchTab('laporan')" class="bg-indigo-500 text-white p-4 rounded-xl flex flex-col items-center gap-2 shadow-sm active:scale-95 transition-transform">
                     <i data-lucide="file-text"></i>
                     <span class="text-sm font-medium">Laporan Hari Ini</span>
                 </button>
             </div>
         </section>
 
-        <!-- Tab: Database Siswa -->
+        <!-- TAB SISWA -->
         <section id="siswa" class="tab-content">
             <div class="flex flex-wrap justify-between items-center mb-6 gap-3">
                 <h2 class="text-xl font-bold text-slate-800">Data Siswa</h2>
                 <div class="flex flex-wrap gap-2">
-                    <button onclick="downloadAllQRCards()" class="bg-slate-700 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-sm shadow-sm hover:bg-slate-800 transition-colors">
-                        <i data-lucide="download-cloud" size="18"></i> Unduh Semua QR
+                    <button onclick="downloadCSVTemplate()" class="bg-slate-200 text-slate-700 px-3 py-2 rounded-lg flex items-center gap-2 text-sm shadow-sm hover:bg-slate-300 transition-colors">
+                        <i data-lucide="download" size="18"></i> Template
                     </button>
-                    <button onclick="downloadCSVTemplate()" class="bg-slate-100 text-slate-700 px-3 py-2 rounded-lg flex items-center gap-2 text-sm border border-slate-200 shadow-sm hover:bg-slate-200 transition-colors">
-                        <i data-lucide="file-text" size="18"></i> Template CSV
-                    </button>
-                    <label class="import-label bg-emerald-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-sm cursor-pointer shadow-sm hover:bg-emerald-700 transition-colors">
-                        <i data-lucide="file-up" size="18"></i> Impor CSV
-                        <input type="file" id="csv-file" class="hidden" accept=".csv" onchange="importCSV(event)">
-                    </label>
-                    <button onclick="openSiswaModal()" class="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-sm shadow-sm hover:bg-blue-700 transition-colors">
+                    <button onclick="openSiswaModal()" class="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-sm shadow-sm">
                         <i data-lucide="plus-circle" size="18"></i> Tambah
                     </button>
+                    <label class="bg-emerald-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-sm shadow-sm cursor-pointer">
+                        <i data-lucide="file-up" size="18"></i> Impor CSV
+                        <input type="file" id="csv-file-input" class="hidden" accept=".csv" onchange="importSiswaCSV(event)">
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 space-y-4">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Fitur Unduh QR Massal</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button onclick="generateBulkQRReport('all')" class="bg-blue-700 text-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm">
+                        <i data-lucide="qr-code" size="16"></i> UNDUH QR SEMUA SISWA
+                    </button>
+                    <div class="flex gap-2">
+                        <select id="filter-kelas-unduh" class="flex-1 p-2 text-xs rounded-lg border border-slate-200 outline-none">
+                            <option value="">Pilih Kelas...</option>
+                        </select>
+                        <button onclick="generateBulkQRReport('kelas')" class="bg-indigo-600 text-white py-2 px-4 rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm">
+                            <i data-lucide="printer" size="14"></i> PER KELAS
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -94,325 +102,247 @@
                 <input type="text" id="search-siswa" placeholder="Cari nama atau kelas..." class="w-full p-3 pl-10 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none" onkeyup="renderSiswaList()">
                 <i data-lucide="search" class="absolute left-3 top-3 text-slate-400" size="18"></i>
             </div>
-
             <div id="siswa-list" class="space-y-3"></div>
         </section>
 
-        <!-- Tab: Input Manual -->
-        <section id="manual" class="tab-content">
-            <h2 class="text-xl font-bold text-slate-800 mb-6">Presensi Non-Hadir</h2>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="space-y-4">
-                    <div class="relative">
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Cari Nama Siswa</label>
-                        <div class="relative group">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <i data-lucide="search" class="text-slate-400 group-focus-within:text-amber-500 transition-colors" size="18"></i>
-                            </div>
-                            <input type="text" id="manual-search-input" placeholder="Ketik nama atau kelas..." class="w-full p-3.5 pl-11 rounded-xl border border-slate-200 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none shadow-sm transition-all" onkeyup="searchManualSiswa()">
-                        </div>
-                        
-                        <div id="manual-search-results" class="mt-2 max-h-60 overflow-y-auto border border-slate-100 rounded-xl bg-slate-50 hidden shadow-inner"></div>
-                        
-                        <div id="selected-student-info" class="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl hidden flex items-center justify-between animate-pulse">
-                            <div>
-                                <p class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Siswa Terpilih:</p>
-                                <p id="selected-name" class="font-bold text-slate-800"></p>
-                            </div>
-                            <button onclick="clearSelectedStudent()" class="text-slate-400 hover:text-red-500 p-1"><i data-lucide="x-circle" size="20"></i></button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-3">Pilih Keterangan</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <button onclick="setManualStatus('Sakit')" class="status-btn border border-slate-200 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-50" id="btn-Sakit">Sakit</button>
-                            <button onclick="setManualStatus('Izin')" class="status-btn border border-slate-200 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-50" id="btn-Izin">Izin</button>
-                            <button onclick="setManualStatus('Alpha')" class="status-btn border border-slate-200 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-50" id="btn-Alpha">Alpha</button>
-                        </div>
-                    </div>
-                    
-                    <button onclick="submitManualAttendance()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold mt-4 shadow-lg active:scale-95 transition-transform hover:bg-blue-700">Simpan Data</button>
+        <!-- TAB LAPORAN -->
+        <section id="laporan" class="tab-content">
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+                <h2 class="text-xl font-bold text-slate-800">Laporan Kehadiran</h2>
+                <div class="flex gap-2">
+                    <button onclick="printLaporan('all')" class="bg-indigo-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-xs shadow-sm">
+                        <i data-lucide="printer" size="16"></i> Cetak Semua
+                    </button>
+                    <button onclick="showPrintKelasModal()" class="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-xs shadow-sm">
+                        <i data-lucide="layers" size="16"></i> Per Kelas
+                    </button>
+                </div>
+            </div>
+            <div class="mb-4 relative">
+                <input type="text" id="search-laporan" placeholder="Filter nama atau kelas..." class="w-full p-3 pl-10 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" onkeyup="renderLaporan()">
+                <i data-lucide="filter" class="absolute left-3 top-3 text-slate-400" size="18"></i>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="p-4 font-semibold">Siswa</th>
+                                <th class="p-4 font-semibold">Status</th>
+                                <th class="p-4 font-semibold">Waktu</th>
+                                <th class="p-4 font-semibold">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="laporan-table-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
                 </div>
             </div>
         </section>
 
-        <!-- Tab: Laporan -->
-        <section id="laporan" class="tab-content">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-slate-800">Laporan Presensi</h2>
-                <div class="flex gap-2">
-                    <button onclick="downloadLaporanPerKelas()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-sm shadow-sm hover:bg-indigo-700 transition-colors">
-                        <i data-lucide="download" size="18"></i> Unduh per Kelas
-                    </button>
-                    <button onclick="exportToCSV()" class="bg-green-600 text-white p-2 rounded-lg shadow-sm" title="Ekspor Semua CSV">
-                        <i data-lucide="file-spreadsheet" size="20"></i>
-                    </button>
+        <!-- TAB MANUAL -->
+        <section id="manual" class="tab-content">
+            <h2 class="text-xl font-bold text-slate-800 mb-6">Input Manual</h2>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <input type="text" id="manual-search-input" placeholder="Cari nama siswa..." class="w-full p-3 rounded-xl border border-slate-200" onkeyup="searchManualSiswa()">
+                <div id="manual-search-results" class="mt-2 max-h-40 overflow-y-auto border border-slate-100 rounded-xl hidden"></div>
+                <div id="selected-student-info" class="hidden p-4 bg-blue-50 border border-blue-100 rounded-xl flex justify-between items-center font-bold text-blue-700">
+                    <span id="selected-name"></span>
+                    <button onclick="clearSelectedStudent()" class="text-red-500"><i data-lucide="x-circle"></i></button>
                 </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                <div class="relative">
-                    <input type="text" id="search-laporan" placeholder="Cari nama siswa..." class="w-full p-3 pl-10 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm" onkeyup="renderLaporan()">
-                    <i data-lucide="search" class="absolute left-3 top-3 text-slate-400" size="18"></i>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setManualStatus('Sakit')" id="btn-Sakit" class="status-btn border py-3 rounded-xl text-xs font-bold">SAKIT</button>
+                    <button onclick="setManualStatus('Izin')" id="btn-Izin" class="status-btn border py-3 rounded-xl text-xs font-bold">IZIN</button>
+                    <button onclick="setManualStatus('Alpha')" id="btn-Alpha" class="status-btn border py-3 rounded-xl text-xs font-bold">ALPHA</button>
                 </div>
-                <div class="relative">
-                    <select id="filter-kelas-laporan" class="w-full p-3 pl-10 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm appearance-none bg-white" onchange="renderLaporan()">
-                        <option value="">Semua Kelas</option>
-                    </select>
-                    <i data-lucide="filter" class="absolute left-3 top-3 text-slate-400" size="18"></i>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-600">
-                        <tr>
-                            <th class="p-4 font-semibold">Nama / Kelas</th>
-                            <th class="p-4 font-semibold">Status</th>
-                            <th class="p-4 font-semibold">Waktu</th>
-                        </tr>
-                    </thead>
-                    <tbody id="laporan-table-body" class="divide-y divide-slate-100"></tbody>
-                </table>
+                <button onclick="submitManualAttendance()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">SIMPAN DATA</button>
             </div>
         </section>
     </main>
 
-    <!-- Navigation -->
+    <!-- NAV BAR -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-50">
         <button onclick="switchTab('scan')" class="nav-link text-blue-600 flex flex-col items-center" id="nav-scan">
-            <i data-lucide="camera"></i>
-            <span class="text-[10px] mt-1 font-bold">SCAN</span>
+            <i data-lucide="camera"></i><span class="text-[10px] mt-1 font-bold">SCAN</span>
         </button>
         <button onclick="switchTab('siswa')" class="nav-link text-slate-400 flex flex-col items-center" id="nav-siswa">
-            <i data-lucide="users"></i>
-            <span class="text-[10px] mt-1 font-medium">SISWA</span>
+            <i data-lucide="users"></i><span class="text-[10px] mt-1 font-medium">SISWA</span>
         </button>
         <button onclick="switchTab('laporan')" class="nav-link text-slate-400 flex flex-col items-center" id="nav-laporan">
-            <i data-lucide="clipboard-list"></i>
-            <span class="text-[10px] mt-1 font-medium">LAPORAN</span>
+            <i data-lucide="clipboard-list"></i><span class="text-[10px] mt-1 font-medium">LAPORAN</span>
         </button>
     </nav>
 
-    <!-- Modal Siswa -->
+    <!-- MODALS -->
     <div id="siswa-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-[60]">
-        <div class="bg-white w-full max-w-md rounded-2xl p-6">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
             <h3 id="modal-title" class="text-lg font-bold mb-4">Tambah Siswa</h3>
             <div class="space-y-4">
                 <input type="hidden" id="edit-index">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Lengkap</label>
-                    <input type="text" id="siswa-nama" class="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-blue-500" placeholder="Contoh: Budi Santoso">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kelas</label>
-                    <input type="text" id="siswa-kelas" class="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-blue-500" placeholder="Contoh: 7A">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">ID Unik (NIS)</label>
-                    <input type="text" id="siswa-id" class="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-blue-500" placeholder="Contoh: 12345">
-                </div>
-                <div class="flex gap-2 mt-6">
-                    <button onclick="closeSiswaModal()" class="flex-1 py-3 border border-slate-200 rounded-xl font-medium">Batal</button>
+                <input type="text" id="siswa-nama" class="w-full p-3 rounded-xl border border-slate-200" placeholder="Nama Lengkap">
+                <input type="text" id="siswa-kelas" class="w-full p-3 rounded-xl border border-slate-200" placeholder="Kelas">
+                <input type="text" id="siswa-id" class="w-full p-3 rounded-xl border border-slate-200" placeholder="ID Siswa / NIS">
+                <div class="flex gap-2">
+                    <button onclick="closeSiswaModal()" class="flex-1 py-3 border rounded-xl font-medium">Batal</button>
                     <button onclick="saveSiswa()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">Simpan</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script Utama -->
+    <div id="print-kelas-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-[60]">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+            <h3 class="text-lg font-bold mb-4">Cetak Laporan Per Kelas</h3>
+            <div class="space-y-4">
+                <select id="select-print-kelas" class="w-full p-3 rounded-xl border border-slate-200 outline-none"></select>
+                <div class="flex gap-2">
+                    <button onclick="closePrintKelasModal()" class="flex-1 py-3 border rounded-xl font-medium">Batal</button>
+                    <button onclick="executePrintKelas()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">Cetak</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let dataSiswa = JSON.parse(localStorage.getItem('db_siswa')) || [];
         let dataPresensi = JSON.parse(localStorage.getItem('db_presensi')) || [];
-        let manualStatusSelected = "";
-        let selectedStudentId = "";
         let html5QrCode = null;
+        let selectedStudentId = "";
+        let manualStatusSelected = "";
+        let currentCameraId = null;
 
         window.onload = () => {
             lucide.createIcons();
             document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            renderSiswaList();
-            renderLaporan();
-            updateKelasOptions();
-            
-            // Inisialisasi awal scanner
-            initScanner();
+            refreshAll();
+            // Jalankan inisialisasi scanner setelah sedikit delay agar DOM siap
+            setTimeout(initScanner, 500);
         };
 
-        // --- Inisialisasi Scanner dengan Html5-Qrcode ---
-        async function initScanner() {
-            const loadingEl = document.getElementById('camera-loading');
-            const feedback = document.getElementById('scan-feedback');
-            
-            // Pastikan menghentikan scanner lama jika ada dan sedang berjalan
-            if (html5QrCode && html5QrCode.isScanning) {
-                try {
-                    await html5QrCode.stop();
-                } catch (e) {
-                    console.warn("Gagal menghentikan scanner sebelum mulai ulang:", e);
-                }
-            }
-
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
-
-            const config = { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
-            };
-
-            // Menggunakan kamera belakang
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                (decodedText) => {
-                    processAttendance(decodedText, 'Hadir');
-                },
-                (errorMessage) => {
-                    // Abaikan pesan error scanning rutin
-                }
-            ).then(() => {
-                if (loadingEl) loadingEl.classList.add('hidden');
-                if (feedback) feedback.classList.add('hidden');
-            }).catch(err => {
-                console.error("Gagal memulai kamera:", err);
-                showError("Kamera gagal diakses. Pastikan izin diberikan dan HTTPS aktif.");
-            });
+        function refreshAll() {
+            renderSiswaList();
+            renderLaporan();
+            updateKelasFilter();
         }
 
-        async function stopScanner() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                try {
-                    await html5QrCode.stop();
-                } catch (e) {
-                    console.error("Error stopping scanner:", e);
+        async function initScanner() {
+            const loadingEl = document.getElementById('camera-loading');
+            const cameraSelect = document.getElementById('camera-selection');
+            
+            try {
+                // Selalu buat instance baru jika belum ada
+                if (!html5QrCode) {
+                    html5QrCode = new Html5Qrcode("reader");
                 }
+                
+                const cameras = await Html5Qrcode.getCameras();
+                if (cameras && cameras.length > 0) {
+                    // Isi dropdown kamera
+                    cameraSelect.innerHTML = cameras.map(cam => `<option value="${cam.id}">${cam.label || 'Kamera ' + (cameras.indexOf(cam)+1)}</option>`).join('');
+                    
+                    // Prioritas: Kamera belakang atau kamera terakhir yang dipilih
+                    if (!currentCameraId) {
+                        const backCam = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear'));
+                        currentCameraId = backCam ? backCam.id : cameras[0].id;
+                    }
+                    
+                    cameraSelect.value = currentCameraId;
+                    await startCamera(currentCameraId);
+                } else {
+                    loadingEl.innerHTML = "<span class='text-red-400'>Kamera tidak ditemukan</span>";
+                }
+            } catch (err) { 
+                loadingEl.innerHTML = "<span class='text-red-400 text-xs'>Izin kamera ditolak / Gagal</span>";
+                console.error("Init Error:", err);
             }
+        }
+
+        async function startCamera(cameraId) {
+            const loadingEl = document.getElementById('camera-loading');
+            loadingEl.classList.remove('hidden');
+            
+            try {
+                // Pastikan scanner berhenti sebelum mulai lagi
+                if (html5QrCode && html5QrCode.isScanning) {
+                    await html5QrCode.stop();
+                }
+
+                const config = { 
+                    fps: 10, 
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0 
+                };
+
+                await html5QrCode.start(
+                    cameraId, 
+                    config, 
+                    (text) => processAttendance(text, 'Hadir'),
+                    (errorMessage) => { /* abaikan error pencarian QR */ }
+                );
+                
+                loadingEl.classList.add('hidden');
+            } catch (err) {
+                console.error("Start Error:", err);
+                loadingEl.innerHTML = `<span class='text-red-400 text-xs'>Gagal: ${err.message || 'Kamera sibuk'}</span>`;
+                loadingEl.classList.remove('hidden');
+            }
+        }
+
+        async function changeCamera(cameraId) {
+            if (!cameraId) return;
+            currentCameraId = cameraId;
+            await startCamera(cameraId);
         }
 
         async function switchTab(tabId) {
-            // Animasi Tab UI
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             
-            document.querySelectorAll('.nav-link').forEach(el => {
-                el.classList.remove('text-blue-600');
-                el.classList.add('text-slate-400');
-            });
-            
+            // UI Nav Update
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.replace('text-blue-600', 'text-slate-400'));
             const navId = (tabId === 'manual') ? 'nav-scan' : `nav-${tabId}`;
-            const navTarget = document.getElementById(navId);
-            if (navTarget) navTarget.classList.add('text-blue-600');
+            if (document.getElementById(navId)) document.getElementById(navId).classList.replace('text-slate-400', 'text-blue-600');
             
-            // Logika kontrol kamera berdasarkan tab
+            // Logic Scanner
             if (tabId === 'scan') {
-                initScanner();
+                setTimeout(initScanner, 200); 
             } else {
-                await stopScanner();
+                if (html5QrCode && html5QrCode.isScanning) {
+                    try {
+                        await html5QrCode.stop();
+                    } catch(e) { console.warn("Stop scanner error:", e); }
+                }
             }
+            refreshAll();
+            lucide.createIcons();
+        }
 
-            if (tabId === 'laporan') {
-                updateKelasOptions();
+        function processAttendance(sid, status) {
+            const student = dataSiswa.find(s => s.id === sid);
+            if(!student) return showFeedback("QR Tidak Terdaftar!", "bg-red-500 text-white");
+            const today = new Date().toLocaleDateString();
+            if(dataPresensi.some(p => p.id === sid && p.tanggal === today)) {
+                showFeedback(`${student.nama} Sudah Absen`, "bg-amber-500 text-white");
+            } else {
+                dataPresensi.push({ 
+                    id: sid, 
+                    nama: student.nama, 
+                    kelas: student.kelas, 
+                    status, 
+                    waktu: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}), 
+                    tanggal: today,
+                    timestamp: new Date().getTime() 
+                });
+                localStorage.setItem('db_presensi', JSON.stringify(dataPresensi));
+                showFeedback(`Berhasil: ${student.nama}`, "bg-green-500 text-white");
                 renderLaporan();
             }
         }
 
-        function showError(msg) {
-            const feedback = document.getElementById('scan-feedback');
-            const loadingEl = document.getElementById('camera-loading');
-            if (loadingEl) {
-                loadingEl.classList.remove('hidden');
-                loadingEl.innerHTML = `<span class="text-xs text-red-400 p-4 text-center font-bold">${msg}</span>`;
-            }
-            if (feedback) {
-                feedback.className = "mt-4 p-3 rounded-lg bg-red-100 text-red-700 block text-xs font-bold text-center";
-                feedback.innerText = msg;
-                feedback.classList.remove('hidden');
-            }
-        }
-
-        // --- Logika Database Siswa & Laporan ---
-
-        function searchManualSiswa() {
-            const query = document.getElementById('manual-search-input').value.toLowerCase();
-            const resultsBox = document.getElementById('manual-search-results');
-            if (query.length < 1) { resultsBox.classList.add('hidden'); return; }
-            const filtered = dataSiswa.filter(s => s.nama.toLowerCase().includes(query) || s.kelas.toLowerCase().includes(query)).slice(0, 10);
-            if (filtered.length > 0) {
-                resultsBox.classList.remove('hidden');
-                resultsBox.innerHTML = filtered.map(s => `
-                    <button onclick="selectStudent('${s.id}', '${s.nama}', '${s.kelas}')" class="w-full text-left p-3 hover:bg-white border-b border-slate-100 last:border-0 transition-colors">
-                        <p class="font-bold text-slate-800 text-sm">${s.nama}</p>
-                        <p class="text-[10px] text-slate-400 uppercase">Kelas: ${s.kelas} | ID: ${s.id}</p>
-                    </button>
-                `).join('');
-            } else {
-                resultsBox.innerHTML = '<p class="p-3 text-sm text-slate-400">Tidak ditemukan</p>';
-                resultsBox.classList.remove('hidden');
-            }
-        }
-
-        function selectStudent(id, nama, kelas) {
-            selectedStudentId = id;
-            document.getElementById('manual-search-input').value = "";
-            document.getElementById('manual-search-results').classList.add('hidden');
-            const infoBox = document.getElementById('selected-student-info');
-            infoBox.classList.remove('hidden');
-            document.getElementById('selected-name').innerText = `${nama} (${kelas})`;
-        }
-
-        function clearSelectedStudent() {
-            selectedStudentId = "";
-            document.getElementById('manual-search-input').value = "";
-            document.getElementById('manual-search-results').classList.add('hidden');
-            document.getElementById('selected-student-info').classList.add('hidden');
-            document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
-            manualStatusSelected = "";
-        }
-
-        function downloadCSVTemplate() {
-            const csvContent = "nama,kelas,id\nContoh Nama,7A,12345\nBudi Santoso,7B,12346";
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = "template_siswa.csv";
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        }
-
-        async function downloadAllQRCards() {
-            if(dataSiswa.length === 0) return alert("Data siswa kosong.");
-            const container = document.getElementById('qr-hidden-container');
-            container.innerHTML = '';
-            let cardsHtml = '';
-            for (let s of dataSiswa) {
-                const tempDiv = document.createElement('div');
-                container.appendChild(tempDiv);
-                new QRCode(tempDiv, { text: s.id, width: 150, height: 150 });
-                await new Promise(res => setTimeout(res, 100));
-                const canvas = tempDiv.querySelector('canvas');
-                const imgData = canvas ? canvas.toDataURL("image/png") : "";
-                cardsHtml += `<div class="card"><div class="name">${s.nama}</div><div class="qr-box"><img src="${imgData}" /></div><div class="info">ID: ${s.id} | Kelas: ${s.kelas}</div></div>`;
-                container.removeChild(tempDiv);
-            }
-            const finalHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Kartu QR Siswa</title><style>body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }.card { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: center; }.name { font-weight: bold; font-size: 14px; margin-bottom: 10px; }.qr-box img { width: 150px; height: 150px; }.info { font-size: 11px; color: #666; margin-top: 5px; }@media print { .no-print { display: none; } }</style></head><body><div class="no-print" style="margin-bottom:20px;"><button onclick="window.print()" style="padding:10px 20px; cursor:pointer;">Cetak Kartu</button></div><div class="grid">${cardsHtml}</div></body></html>`;
-            const blob = new Blob([finalHtml], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `Kartu_QR_Siswa.html`; a.click();
-        }
-
-        function downloadLaporanPerKelas() {
-            const selectedKelas = document.getElementById('filter-kelas-laporan').value;
-            if(!selectedKelas) return alert("Pilih kelas terlebih dahulu!");
-            const filtered = dataPresensi.filter(p => p.kelas === selectedKelas);
-            if(filtered.length === 0) return alert(`Tidak ada riwayat data untuk kelas ${selectedKelas}.`);
-            let csv = "Tanggal,Waktu,ID Siswa,Nama,Kelas,Status\r\n";
-            filtered.forEach(p => csv += `${p.tanggal},${p.waktu},${p.id},${p.nama.replace(/,/g, '')},${p.kelas.replace(/,/g, '')},${p.status}\r\n`);
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a"); link.href = url; link.download = `Laporan_Kelas_${selectedKelas}.csv`; link.click();
+        function showFeedback(msg, cssClass) {
+            const fb = document.getElementById('scan-feedback');
+            fb.className = `mt-4 p-3 rounded-lg block text-center ${cssClass}`;
+            fb.innerText = msg; fb.classList.remove('hidden');
+            setTimeout(() => fb.classList.add('hidden'), 3000);
         }
 
         function renderSiswaList() {
@@ -420,82 +350,195 @@
             const listEl = document.getElementById('siswa-list');
             listEl.innerHTML = '';
             const filtered = dataSiswa.filter(s => s.nama.toLowerCase().includes(query) || s.kelas.toLowerCase().includes(query));
-            filtered.forEach((s, idx) => {
-                const originalIdx = dataSiswa.findIndex(ds => ds.id === s.id);
-                const div = document.createElement('div');
-                div.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center";
-                div.innerHTML = `<div><h4 class="font-bold text-slate-800">${s.nama}</h4><p class="text-xs text-slate-500">ID: ${s.id} | Kelas: ${s.kelas}</p></div><div class="flex gap-2"><button onclick="openSiswaModal(${originalIdx})" class="p-2 bg-amber-50 text-amber-600 rounded-lg"><i data-lucide="edit-3" size="18"></i></button><button onclick="deleteSiswa(${originalIdx})" class="p-2 bg-red-50 text-red-600 rounded-lg"><i data-lucide="trash-2" size="18"></i></button></div>`;
-                listEl.appendChild(div);
+            
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<p class="text-center p-10 text-slate-400 text-xs italic">Data tidak ditemukan</p>';
+                return;
+            }
+
+            filtered.forEach((s) => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-3";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-blue-100 p-2 rounded-lg text-blue-600"><i data-lucide="user"></i></div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm">${s.nama}</h4>
+                                <p class="text-[10px] text-slate-500">${s.kelas} • ID: ${s.id}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openSiswaModalById('${s.id}')" class="p-2 bg-slate-50 text-slate-400 rounded-lg border hover:bg-slate-100 transition-colors"><i data-lucide="edit-2" size="14"></i></button>
+                            <button onclick="handleDeleteSiswa('${s.id}')" class="p-2 bg-red-50 text-red-500 rounded-lg border border-red-100 hover:bg-red-100 transition-colors"><i data-lucide="trash-2" size="14"></i></button>
+                        </div>
+                    </div>
+                    <div class="mt-1">
+                        <button onclick="printPersonalQR('${s.id}')" class="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                            <i data-lucide="printer" size="12"></i> CETAK QR SISWA
+                        </button>
+                    </div>`;
+                listEl.appendChild(card);
             });
             lucide.createIcons();
         }
 
-        function deleteSiswa(index) {
-            if(confirm(`Hapus data ${dataSiswa[index].nama}?`)) {
-                dataSiswa.splice(index, 1);
+        function downloadCSVTemplate() {
+            const csvContent = "data:text/csv;charset=utf-8,Nama,Kelas,ID Siswa\nBudi Santoso,7A,12345678\nSiti Aminah,7B,87654321";
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "template_siswa.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function printPersonalQR(sid) {
+            const s = dataSiswa.find(x => x.id === sid);
+            if (!s) return;
+            const reportWindow = window.open('', '_blank');
+            reportWindow.document.write(`
+                <html>
+                <head>
+                    <title>QR - ${s.nama}</title>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+                    <style>
+                        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 50px; }
+                        .card { border: 2px solid #000; padding: 20px; text-align: center; width: 250px; border-radius: 10px; }
+                        .qr-box { margin: 20px auto; width: 150px; height: 150px; }
+                        @media print { .btn-print { display: none; } }
+                    </style>
+                </head>
+                <body onload="new QRCode(document.getElementById('qrcode'), {text:'${s.id}', width:150, height:150});">
+                    <button class="btn-print" onclick="window.print()" style="margin-bottom:20px; padding:10px 20px; background:#2563eb; color:#fff; border:none; border-radius:5px;">PRINT</button>
+                    <div class="card">
+                        <h3>KARTU PRESENSI</h3>
+                        <div id="qrcode" class="qr-box"></div>
+                        <h4>${s.nama}</h4>
+                        <p>${s.kelas}</p>
+                    </div>
+                </body>
+                </html>
+            `);
+            reportWindow.document.close();
+        }
+
+        function printLaporan(type, value = null) {
+            let filteredData = [];
+            let title = "";
+            const todayStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            if (type === 'all') {
+                const today = new Date().toLocaleDateString();
+                filteredData = dataPresensi.filter(p => p.tanggal === today);
+                title = "Laporan Kehadiran Harian - " + todayStr;
+            } else if (type === 'kelas') {
+                const today = new Date().toLocaleDateString();
+                filteredData = dataPresensi.filter(p => p.tanggal === today && p.kelas === value);
+                title = "Laporan Kelas " + value + " - " + todayStr;
+            } else if (type === 'siswa') {
+                filteredData = dataPresensi.filter(p => p.id === value).sort((a,b) => b.timestamp - a.timestamp);
+                const s = dataSiswa.find(x => x.id === value);
+                title = "Riwayat: " + (s ? s.nama : value);
+            }
+
+            if (filteredData.length === 0) return alert("Tidak ada data!");
+
+            const printWin = window.open('', '_blank');
+            printWin.document.write(`
+                <html>
+                <head>
+                    <title>Laporan</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 20px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+                        th { background: #f4f4f4; }
+                    </style>
+                </head>
+                <body>
+                    <button onclick="window.print()">PRINT</button>
+                    <h2>${title}</h2>
+                    <table>
+                        <thead><tr><th>No</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Waktu</th></tr></thead>
+                        <tbody>
+                            ${filteredData.map((p, i) => `<tr><td>${i+1}</td><td>${p.nama}</td><td>${p.kelas}</td><td>${p.status}</td><td>${p.waktu}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </body>
+                </html>
+            `);
+            printWin.document.close();
+        }
+
+        function showPrintKelasModal() {
+            const select = document.getElementById('select-print-kelas');
+            const kelasList = [...new Set(dataSiswa.map(s => s.kelas))].sort();
+            select.innerHTML = kelasList.map(k => `<option value="${k}">${k}</option>`).join('');
+            document.getElementById('print-kelas-modal').classList.replace('hidden', 'flex');
+        }
+
+        function closePrintKelasModal() { document.getElementById('print-kelas-modal').classList.replace('flex', 'hidden'); }
+
+        function executePrintKelas() {
+            printLaporan('kelas', document.getElementById('select-print-kelas').value);
+            closePrintKelasModal();
+        }
+
+        function generateBulkQRReport(type) {
+            let target = (type === 'all') ? dataSiswa : dataSiswa.filter(s => s.kelas === document.getElementById('filter-kelas-unduh').value);
+            if (target.length === 0) return alert("Data kosong!");
+
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+                <style>
+                    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+                    .card { border: 1px solid #000; padding: 10px; text-align: center; }
+                </style></head>
+                <body onload="render()">
+                    <button onclick="window.print()">PRINT</button>
+                    <div class="grid" id="g"></div>
+                    <script>
+                        function render(){
+                            const data = ${JSON.stringify(target)};
+                            const g = document.getElementById('g');
+                            data.forEach((s, i) => {
+                                const d = document.createElement('div'); d.className='card';
+                                d.innerHTML = '<h4>'+s.nama+'</h4><div id="q'+i+'"></div><p>'+s.kelas+'</p>';
+                                g.appendChild(d);
+                                new QRCode(document.getElementById('q'+i), {text: s.id, width: 100, height: 100});
+                            });
+                        }
+                    <\/script>
+                </body></html>
+            `);
+            win.document.close();
+        }
+
+        function handleDeleteSiswa(sid) {
+            if (confirm("Hapus siswa ini?")) {
+                dataSiswa = dataSiswa.filter(s => s.id !== sid);
                 localStorage.setItem('db_siswa', JSON.stringify(dataSiswa));
-                renderSiswaList(); updateKelasOptions();
+                refreshAll();
             }
         }
 
-        function updateKelasOptions() {
-            const select = document.getElementById('filter-kelas-laporan');
-            if(!select) return;
-            const uniqueKelas = [...new Set(dataSiswa.map(s => s.kelas))].sort();
-            const currentValue = select.value;
-            select.innerHTML = '<option value="">Semua Kelas</option>';
-            uniqueKelas.forEach(k => { select.innerHTML += `<option value="${k}" ${currentValue === k ? 'selected' : ''}>${k}</option>`; });
-        }
-
-        function renderLaporan() {
-            const body = document.getElementById('laporan-table-body');
-            if(!body) return;
-            const nameQuery = document.getElementById('search-laporan').value.toLowerCase();
-            const kelasQuery = document.getElementById('filter-kelas-laporan').value;
-            const today = new Date().toLocaleDateString();
-            body.innerHTML = '';
-            const filtered = dataPresensi.filter(p => p.tanggal === today && p.nama.toLowerCase().includes(nameQuery) && (kelasQuery === '' || p.kelas === kelasQuery)).reverse();
-            if(filtered.length === 0) { body.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-slate-400">Tidak ada data hari ini</td></tr>'; return; }
-            filtered.forEach(p => {
-                const colors = { 'Hadir': 'bg-green-50 text-green-600', 'Sakit': 'bg-blue-50 text-blue-600', 'Izin': 'bg-amber-50 text-amber-600', 'Alpha': 'bg-red-50 text-red-600' };
-                body.innerHTML += `<tr><td class="p-4"><div class="font-bold text-slate-800">${p.nama}</div><div class="text-[10px] text-slate-400 uppercase">${p.kelas}</div></td><td class="p-4"><span class="px-2 py-1 rounded-md text-[10px] font-bold ${colors[p.status] || ''}">${p.status.toUpperCase()}</span></td><td class="p-4 text-slate-500 font-mono text-xs">${p.waktu}</td></tr>`;
-            });
-        }
-
-        function processAttendance(sid, status) {
-            const student = dataSiswa.find(s => s.id === sid);
-            const feedback = document.getElementById('scan-feedback');
-            if(!student) {
-                feedback.className = "mt-4 p-3 rounded-lg bg-red-100 text-red-700 block font-bold text-center";
-                feedback.innerText = "QR Tidak Terdaftar!";
-                feedback.classList.remove('hidden'); return;
-            }
-            const today = new Date().toLocaleDateString();
-            if(dataPresensi.some(p => p.id === sid && p.tanggal === today)) {
-                feedback.className = "mt-4 p-3 rounded-lg bg-amber-100 text-amber-700 block font-bold text-center";
-                feedback.innerText = `${student.nama} Sudah Absen Hari Ini.`;
-            } else {
-                dataPresensi.push({ id: sid, nama: student.nama, kelas: student.kelas, status, waktu: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}), tanggal: today });
-                localStorage.setItem('db_presensi', JSON.stringify(dataPresensi));
-                feedback.className = "mt-4 p-3 rounded-lg bg-green-500 text-white block font-bold text-center";
-                feedback.innerText = `Presensi Berhasil: ${student.nama}`;
-                renderLaporan(); if(navigator.vibrate) navigator.vibrate(200);
-            }
-            feedback.classList.remove('hidden');
-            setTimeout(() => feedback.classList.add('hidden'), 3000);
+        function openSiswaModalById(sid) {
+            const idx = dataSiswa.findIndex(s => s.id === sid);
+            if (idx !== -1) openSiswaModal(idx);
         }
 
         function openSiswaModal(idx = null) {
             document.getElementById('siswa-modal').classList.replace('hidden', 'flex');
             if(idx !== null) {
                 const s = dataSiswa[idx];
-                document.getElementById('modal-title').innerText = "Edit Siswa";
                 document.getElementById('edit-index').value = idx;
                 document.getElementById('siswa-nama').value = s.nama;
                 document.getElementById('siswa-kelas').value = s.kelas;
                 document.getElementById('siswa-id').value = s.id;
             } else {
-                document.getElementById('modal-title').innerText = "Tambah Siswa";
                 document.getElementById('edit-index').value = "";
                 document.getElementById('siswa-nama').value = "";
                 document.getElementById('siswa-kelas').value = "";
@@ -507,47 +550,91 @@
 
         function saveSiswa() {
             const idx = document.getElementById('edit-index').value;
-            const obj = { nama: document.getElementById('siswa-nama').value, kelas: document.getElementById('siswa-kelas').value, id: document.getElementById('siswa-id').value };
-            if(!obj.nama || !obj.id) return alert("Harap isi nama dan ID!");
-            if(idx !== "") dataSiswa[idx] = obj; else dataSiswa.push(obj);
+            const obj = { 
+                nama: document.getElementById('siswa-nama').value.trim(), 
+                kelas: document.getElementById('siswa-kelas').value.trim(), 
+                id: document.getElementById('siswa-id').value.trim() 
+            };
+            if(!obj.nama || !obj.id) return alert("Lengkapi data!");
+            if(idx !== "") dataSiswa[idx] = obj;
+            else dataSiswa.push(obj);
             localStorage.setItem('db_siswa', JSON.stringify(dataSiswa));
-            renderSiswaList(); updateKelasOptions(); closeSiswaModal();
+            refreshAll(); closeSiswaModal();
+        }
+
+        function updateKelasFilter() {
+            const list = [...new Set(dataSiswa.map(s => s.kelas))].sort();
+            document.getElementById('filter-kelas-unduh').innerHTML = '<option value="">Pilih...</option>' + list.map(k => `<option value="${k}">${k}</option>`).join('');
+        }
+
+        function renderLaporan() {
+            const q = document.getElementById('search-laporan').value.toLowerCase();
+            const body = document.getElementById('laporan-table-body');
+            const today = new Date().toLocaleDateString();
+            body.innerHTML = '';
+            
+            const filtered = dataPresensi.filter(p => p.tanggal === today && (p.nama.toLowerCase().includes(q) || p.kelas.toLowerCase().includes(q))).reverse();
+            
+            filtered.forEach(p => {
+                body.innerHTML += `
+                    <tr>
+                        <td class="p-4"><div class="font-bold text-xs">${p.nama}</div><div class="text-[9px] text-slate-500">${p.kelas}</div></td>
+                        <td class="p-4"><span class="px-2 py-1 rounded-full text-[9px] font-bold bg-green-50 text-green-600">${p.status}</span></td>
+                        <td class="p-4 text-[10px] text-slate-600">${p.waktu}</td>
+                        <td class="p-4"><button onclick="printLaporan('siswa', '${p.id}')" class="text-blue-600"><i data-lucide="history" size="14"></i></button></td>
+                    </tr>`;
+            });
+            lucide.createIcons();
+        }
+
+        function importSiswaCSV(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const lines = event.target.result.split('\n');
+                lines.forEach((line, i) => {
+                    if (i === 0 || !line.trim()) return;
+                    const cols = line.split(',');
+                    if (cols.length >= 3) dataSiswa.push({ nama: cols[0].trim(), kelas: cols[1].trim(), id: cols[2].trim() });
+                });
+                localStorage.setItem('db_siswa', JSON.stringify(dataSiswa));
+                refreshAll();
+            };
+            reader.readAsText(file);
+        }
+
+        function searchManualSiswa() {
+            const q = document.getElementById('manual-search-input').value.toLowerCase();
+            const res = document.getElementById('manual-search-results');
+            if(q.length < 1) { res.classList.add('hidden'); return; }
+            const filtered = dataSiswa.filter(s => s.nama.toLowerCase().includes(q)).slice(0, 5);
+            res.innerHTML = filtered.map(s => `<div onclick="selectStudent('${s.id}', '${s.nama}')" class="p-3 border-b cursor-pointer text-xs bg-slate-50">${s.nama} (${s.kelas})</div>`).join('');
+            res.classList.remove('hidden');
+        }
+
+        function selectStudent(id, nama) {
+            selectedStudentId = id;
+            document.getElementById('selected-name').innerText = nama;
+            document.getElementById('selected-student-info').classList.remove('hidden');
+            document.getElementById('manual-search-results').classList.add('hidden');
+        }
+
+        function clearSelectedStudent() {
+            selectedStudentId = "";
+            document.getElementById('selected-student-info').classList.add('hidden');
         }
 
         function setManualStatus(st) {
             manualStatusSelected = st;
             document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
-            const btn = document.getElementById(`btn-${st}`);
-            if (btn) btn.classList.add('bg-blue-600', 'text-white');
+            document.getElementById(`btn-${st}`).classList.add('bg-blue-600', 'text-white');
         }
 
         function submitManualAttendance() {
-            if(!selectedStudentId || !manualStatusSelected) return alert("Pilih siswa & tentukan statusnya!");
+            if(!selectedStudentId || !manualStatusSelected) return alert("Pilih siswa dan status!");
             processAttendance(selectedStudentId, manualStatusSelected);
-            switchTab('laporan'); clearSelectedStudent();
-        }
-
-        function importCSV(e) {
-            const f = e.target.files[0]; if(!f) return;
-            const r = new FileReader();
-            r.onload = ev => {
-                const lines = ev.target.result.split('\n');
-                lines.slice(1).forEach(l => {
-                    const c = l.split(',').map(x => x.trim());
-                    if(c.length >= 3 && !dataSiswa.some(s => s.id === c[2])) dataSiswa.push({nama:c[0], kelas:c[1], id:c[2]});
-                });
-                localStorage.setItem('db_siswa', JSON.stringify(dataSiswa));
-                renderSiswaList(); updateKelasOptions();
-            };
-            r.readAsText(f);
-        }
-
-        function exportToCSV() {
-            let csv = "Tanggal,Waktu,ID,Nama,Kelas,Status\r\n";
-            dataPresensi.forEach(p => csv += `${p.tanggal},${p.waktu},${p.id},${p.nama},${p.kelas},${p.status}\r\n`);
-            const blob = new Blob([csv], {type:'text/csv'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = "Laporan_Presensi_Lengkap.csv"; a.click();
+            clearSelectedStudent();
+            refreshAll();
         }
     </script>
 </body>
