@@ -8,19 +8,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- Tambahkan Chart.js untuk grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        /* Memastikan area reader memenuhi ruang yang tersedia */
         #reader { width: 100%; border: none !important; border-radius: 12px; overflow: hidden; background-color: #000; }
         #reader video { border-radius: 12px; object-fit: cover; width: 100% !important; height: 100% !important; }
-        /* Styling tambahan untuk memperjelas area scan */
         #reader__scan_region { background: #000; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-20">
+<body class="bg-slate-50 min-h-screen pb-24"> <!-- pb ditingkatkan agar tidak tertutup nav -->
 
     <header class="bg-blue-600 text-white p-4 sticky top-0 z-50 shadow-md">
         <div class="flex justify-between items-center">
@@ -38,7 +38,6 @@
             <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 border border-slate-200 text-center">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-semibold text-slate-700">Scan QR Code</h2>
-                    <!-- Fitur Pilih Kamera -->
                     <select id="camera-selection" class="text-[10px] p-2 border rounded-lg bg-slate-50 outline-none max-w-[160px]" onchange="changeCamera(this.value)">
                         <option value="">Mencari Kamera...</option>
                     </select>
@@ -84,7 +83,6 @@
                 </div>
             </div>
 
-            <!-- MENU BACKUP DATA -->
             <div class="bg-slate-800 p-4 rounded-2xl shadow-md mb-6 border border-slate-700 text-white">
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Manajemen Cadangan (Backup)</p>
                 <div class="grid grid-cols-2 gap-3">
@@ -122,16 +120,37 @@
             <div id="siswa-list" class="space-y-3"></div>
         </section>
 
+        <!-- TAB STATISTIK -->
+        <section id="statistik" class="tab-content">
+            <h2 class="text-xl font-bold text-slate-800 mb-6">Tren Keterlambatan</h2>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+                <p class="text-[10px] font-bold text-slate-500 uppercase mb-4">Jumlah Terlambat (7 Hari Terakhir)</p>
+                <div class="relative h-64 w-full">
+                    <canvas id="delayChart"></canvas>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                    <p class="text-[10px] font-bold text-red-500 uppercase">Total Terlambat</p>
+                    <h3 id="stat-total-terlambat" class="text-2xl font-bold text-red-700">0</h3>
+                </div>
+                <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                    <p class="text-[10px] font-bold text-green-500 uppercase">Total Hadir</p>
+                    <h3 id="stat-total-hadir" class="text-2xl font-bold text-green-700">0</h3>
+                </div>
+            </div>
+        </section>
+
         <!-- TAB LAPORAN -->
         <section id="laporan" class="tab-content">
             <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
                 <h2 class="text-xl font-bold text-slate-800">Laporan Kehadiran</h2>
                 <div class="flex gap-2">
                     <button onclick="printLaporan('all')" class="bg-indigo-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-xs shadow-sm">
-                        <i data-lucide="printer" size="16"></i> Cetak Semua
+                        <i data-lucide="printer" size="16"></i> Hari Ini
                     </button>
                     <button onclick="showPrintKelasModal()" class="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-xs shadow-sm">
-                        <i data-lucide="layers" size="16"></i> Per Kelas
+                        <i data-lucide="calendar-search" size="16"></i> Filter Laporan
                     </button>
                 </div>
             </div>
@@ -166,7 +185,7 @@
                     <span id="selected-name"></span>
                     <button onclick="clearSelectedStudent()" class="text-red-500"><i data-lucide="x-circle"></i></button>
                 </div>
-                <div class="grid grid-cols-3 gap-2">
+                <div class="grid grid-cols-2 gap-2">
                     <button onclick="setManualStatus('Sakit')" id="btn-Sakit" class="status-btn border py-3 rounded-xl text-xs font-bold">SAKIT</button>
                     <button onclick="setManualStatus('Izin')" id="btn-Izin" class="status-btn border py-3 rounded-xl text-xs font-bold">IZIN</button>
                     <button onclick="setManualStatus('Alpha')" id="btn-Alpha" class="status-btn border py-3 rounded-xl text-xs font-bold">ALPHA</button>
@@ -177,7 +196,7 @@
         </section>
     </main>
 
-    <!-- NAV BAR -->
+    <!-- NAV BAR - 4 MENU -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-50">
         <button onclick="switchTab('scan')" class="nav-link text-blue-600 flex flex-col items-center" id="nav-scan">
             <i data-lucide="camera"></i><span class="text-[10px] mt-1 font-bold">SCAN</span>
@@ -185,12 +204,15 @@
         <button onclick="switchTab('siswa')" class="nav-link text-slate-400 flex flex-col items-center" id="nav-siswa">
             <i data-lucide="users"></i><span class="text-[10px] mt-1 font-medium">SISWA</span>
         </button>
+        <button onclick="switchTab('statistik')" class="nav-link text-slate-400 flex flex-col items-center" id="nav-statistik">
+            <i data-lucide="bar-chart-3"></i><span class="text-[10px] mt-1 font-medium">STATISTIK</span>
+        </button>
         <button onclick="switchTab('laporan')" class="nav-link text-slate-400 flex flex-col items-center" id="nav-laporan">
             <i data-lucide="clipboard-list"></i><span class="text-[10px] mt-1 font-medium">LAPORAN</span>
         </button>
     </nav>
 
-    <!-- MODALS -->
+    <!-- MODAL SISWA -->
     <div id="siswa-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-[60]">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
             <h3 id="modal-title" class="text-lg font-bold mb-4">Tambah Siswa</h3>
@@ -207,14 +229,25 @@
         </div>
     </div>
 
-    <!-- MODAL PRINT KELAS -->
+    <!-- MODAL PRINT/FILTER LAPORAN -->
     <div id="print-kelas-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-[60]">
         <div class="bg-white w-full max-w-sm rounded-2xl p-6">
-            <h3 class="font-bold mb-4 text-slate-800">Cetak Laporan Per Kelas</h3>
-            <select id="select-print-kelas" class="w-full p-3 rounded-xl border mb-4 outline-none"></select>
-            <div class="flex gap-2">
-                <button onclick="closePrintKelasModal()" class="flex-1 py-2 border rounded-xl">Batal</button>
-                <button onclick="executePrintKelas()" class="flex-1 py-2 bg-blue-600 text-white rounded-xl font-bold">Cetak</button>
+            <h3 class="font-bold mb-4 text-slate-800">Filter Laporan Pertanggal</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Pilih Tanggal</label>
+                    <input type="date" id="select-print-date" class="w-full p-3 rounded-xl border outline-none text-sm">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Pilih Kelas</label>
+                    <select id="select-print-kelas" class="w-full p-3 rounded-xl border outline-none text-sm">
+                        <option value="all">Semua Kelas</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-6">
+                <button onclick="closePrintKelasModal()" class="flex-1 py-2 border rounded-xl text-sm">Batal</button>
+                <button onclick="executePrintLaporan()" class="flex-1 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm">Cetak Laporan</button>
             </div>
         </div>
     </div>
@@ -226,46 +259,51 @@
         let selectedStudentId = "";
         let manualStatusSelected = "";
         let currentCameraId = null;
+        let delayChart = null;
 
-        // Web Audio API Beep & Siren Functions
         function playBeep() {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            oscillator.type = 'sine'; 
-            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-            oscillator.start(audioCtx.currentTime);
-            oscillator.stop(audioCtx.currentTime + 0.2);
-        }
-
-        function playSiren() {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const playTone = (freq, start, duration) => {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
-                oscillator.type = 'sawtooth';
-                oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + start);
-                oscillator.frequency.exponentialRampToValueAtTime(freq * 1.5, audioCtx.currentTime + start + duration);
-                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + start);
-                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + start + duration);
-                oscillator.start(audioCtx.currentTime + start);
-                oscillator.stop(audioCtx.currentTime + start + duration);
-            };
-            // Sirine dua nada
-            playTone(440, 0, 0.4);
-            playTone(440, 0.5, 0.4);
-            playTone(440, 1.0, 0.6);
+                oscillator.type = 'sine'; 
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.2);
+            } catch(e) {}
+        }
+
+        function playSiren() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const playTone = (freq, start, duration) => {
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + start);
+                    oscillator.frequency.exponentialRampToValueAtTime(freq * 1.5, audioCtx.currentTime + start + duration);
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + start);
+                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + start + duration);
+                    oscillator.start(audioCtx.currentTime + start);
+                    oscillator.stop(audioCtx.currentTime + start + duration);
+                };
+                playTone(440, 0, 0.4);
+                playTone(440, 0.5, 0.4);
+                playTone(440, 1.0, 0.6);
+            } catch(e) {}
         }
 
         window.onload = () => {
             lucide.createIcons();
             document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const todayISO = new Date().toISOString().split('T')[0];
+            document.getElementById('select-print-date').value = todayISO;
             refreshAll();
             setTimeout(initScanner, 500);
         };
@@ -274,9 +312,9 @@
             renderSiswaList();
             renderLaporan();
             updateKelasFilter();
+            updateStatistik();
         }
 
-        // BACKUP & RESTORE
         function exportFullData() {
             const backupData = { siswa: dataSiswa, presensi: dataPresensi, exportedAt: new Date().toISOString() };
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
@@ -336,12 +374,8 @@
                     const now = new Date();
                     const hours = now.getHours();
                     const minutes = now.getMinutes();
-                    
                     let status = "Hadir";
-                    if (hours > 6 || (hours === 6 && minutes > 50)) {
-                        status = "Terlambat";
-                    }
-                    
+                    if (hours > 6 || (hours === 6 && minutes > 50)) status = "Terlambat";
                     processAttendance(text, status);
                 }, () => {});
                 loadingEl.classList.add('hidden');
@@ -356,8 +390,11 @@
             document.querySelectorAll('.nav-link').forEach(el => el.classList.replace('text-blue-600', 'text-slate-400'));
             const navId = (tabId === 'manual') ? 'nav-scan' : `nav-${tabId}`;
             if (document.getElementById(navId)) document.getElementById(navId).classList.replace('text-slate-400', 'text-blue-600');
+            
             if (tabId === 'scan') setTimeout(initScanner, 200); 
             else if (html5QrCode && html5QrCode.isScanning) await html5QrCode.stop();
+            
+            if (tabId === 'statistik') updateStatistik();
             refreshAll(); lucide.createIcons();
         }
 
@@ -381,14 +418,54 @@
                 if (status === "Terlambat") {
                     showFeedback(`TERLAMBAT: ${student.nama}`, "bg-red-600 text-white ring-4 ring-red-200");
                     playSiren();
-                    // Cetak Kartu Terlambat Otomatis
                     setTimeout(() => printSlipTerlambat(student, waktuScan), 1000);
                 } else {
                     showFeedback(`BERHASIL: ${student.nama}`, "bg-green-500 text-white");
                     playBeep();
                 }
-                renderLaporan();
+                refreshAll();
             }
+        }
+
+        function updateStatistik() {
+            const last7Days = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                last7Days.push(d.toLocaleDateString());
+            }
+
+            const dataPoints = last7Days.map(date => {
+                return dataPresensi.filter(p => p.tanggal === date && p.status === 'Terlambat').length;
+            });
+
+            const ctx = document.getElementById('delayChart').getContext('2d');
+            if (delayChart) delayChart.destroy();
+
+            delayChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: last7Days.map(d => {
+                        const parts = d.split('/');
+                        return parts[0] + '/' + parts[1];
+                    }),
+                    datasets: [{
+                        label: 'Siswa Terlambat',
+                        data: dataPoints,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+
+            document.getElementById('stat-total-terlambat').innerText = dataPresensi.filter(p => p.status === 'Terlambat').length;
+            document.getElementById('stat-total-hadir').innerText = dataPresensi.filter(p => p.status === 'Hadir').length;
         }
 
         function showFeedback(msg, cssClass) {
@@ -398,69 +475,13 @@
             setTimeout(() => fb.classList.add('hidden'), 4000);
         }
 
-        // FUNGSI CETAK SLIP TERLAMBAT
         function printSlipTerlambat(student, waktu) {
             const win = window.open('', '_blank');
             const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            
-            win.document.write(`
-                <html>
-                <head>
-                    <title>Surat Izin Masuk Kelas</title>
-                    <style>
-                        body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; margin: 0; }
-                        .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 3mm; margin-bottom: 3mm; }
-                        .content { font-size: 12px; line-height: 1.4; }
-                        .title { font-weight: bold; text-align: center; text-decoration: underline; margin-bottom: 3mm; display: block; }
-                        .row { display: flex; justify-content: space-between; margin-bottom: 1mm; }
-                        .footer { margin-top: 5mm; border-top: 1px dashed #000; padding-top: 3mm; font-size: 10px; }
-                        .signature-box { margin-top: 8mm; display: flex; justify-content: space-between; }
-                        .sign-area { text-align: center; width: 45%; }
-                        .sign-space { height: 12mm; }
-                        @media print { @page { margin: 0; } body { margin: 0; } }
-                    </style>
-                </head>
-                <body onload="window.print(); setTimeout(()=>window.close(), 500);">
-                    <div class="header">
-                        <h2 style="margin:0; font-size: 16px;">SMP N 2 Ceper</h2>
-                        <p style="margin:0; font-size: 10px;">Surat Keterangan Terlambat</p>
-                    </div>
-                    <div class="content">
-                        <span class="title">IZIN MASUK KELAS</span>
-                        <div class="row"><span>Tanggal:</span> <span>${dateStr}</span></div>
-                        <div class="row"><span>Jam Scan:</span> <span>${waktu} WIB</span></div>
-                        <div class="row"><span>Status:</span> <span style="font-weight:bold;">TERLAMBAT (>06.50)</span></div>
-                        <hr style="border:0; border-top:1px solid #eee;">
-                        <div class="row"><span>Nama:</span> <span>${student.nama}</span></div>
-                        <div class="row"><span>Kelas:</span> <span>${student.kelas}</span></div>
-                        <div class="row"><span>NIS/ID:</span> <span>${student.id}</span></div>
-                        
-                        <p style="margin-top:5mm; font-size: 11px;">
-                            Siswa tersebut di atas dinyatakan terlambat mengikuti kegiatan sekolah. Mohon kiranya diperkenankan masuk ke kelas.
-                        </p>
-                    </div>
-                    <div class="signature-box">
-                        <div class="sign-area">
-                            <span>Piket/Guru BK</span>
-                            <div class="sign-space"></div>
-                            <span>(................)</span>
-                        </div>
-                        <div class="sign-area">
-                            <span>Guru Pengajar</span>
-                            <div class="sign-space"></div>
-                            <span>(................)</span>
-                        </div>
-                    </div>
-                    <div class="footer">
-                        * Lembar ini wajib diserahkan kepada guru pengajar di kelas.
-                    </div>
-                </body>
-                </html>
-            `);
+            win.document.write(`<html><head><title>Surat Izin Masuk Kelas</title><style>body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; margin: 0; } .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 3mm; margin-bottom: 3mm; } .content { font-size: 12px; line-height: 1.4; } .title { font-weight: bold; text-align: center; text-decoration: underline; margin-bottom: 3mm; display: block; } .row { display: flex; justify-content: space-between; margin-bottom: 1mm; } .footer { margin-top: 5mm; border-top: 1px dashed #000; padding-top: 3mm; font-size: 10px; } .signature-box { margin-top: 8mm; display: flex; justify-content: space-between; } .sign-area { text-align: center; width: 45%; } .sign-space { height: 12mm; } @media print { @page { margin: 0; } body { margin: 0; } }</style></head><body onload="window.print(); setTimeout(()=>window.close(), 500);"><div class="header"><h2 style="margin:0; font-size: 16px;">SMP NEGERI KOTA</h2><p style="margin:0; font-size: 10px;">Surat Keterangan Terlambat</p></div><div class="content"><span class="title">IZIN MASUK KELAS</span><div class="row"><span>Tanggal:</span> <span>${dateStr}</span></div><div class="row"><span>Jam Scan:</span> <span>${waktu} WIB</span></div><div class="row"><span>Status:</span> <span style="font-weight:bold;">TERLAMBAT (>06.50)</span></div><hr style="border:0; border-top:1px solid #eee;"><div class="row"><span>Nama:</span> <span>${student.nama}</span></div><div class="row"><span>Kelas:</span> <span>${student.kelas}</span></div><div class="row"><span>NIS/ID:</span> <span>${student.id}</span></div><p style="margin-top:5mm; font-size: 11px;">Siswa tersebut di atas dinyatakan terlambat mengikuti kegiatan sekolah. Mohon kiranya diperkenankan masuk ke kelas.</p></div><div class="signature-box"><div class="sign-area"><span>Piket/Guru BK</span><div class="sign-space"></div><span>(................)</span></div><div class="sign-area"><span>Guru Pengajar</span><div class="sign-space"></div><span>(................)</span></div></div><div class="footer">* Lembar ini wajib diserahkan kepada guru pengajar di kelas.</div></body></html>`);
             win.document.close();
         }
 
-        // DATA SISWA RENDER
         function renderSiswaList() {
             const q = document.getElementById('search-siswa').value.toLowerCase();
             const listEl = document.getElementById('siswa-list');
@@ -489,7 +510,6 @@
             lucide.createIcons();
         }
 
-        // LAPORAN RENDER
         function renderLaporan() {
             const q = document.getElementById('search-laporan').value.toLowerCase();
             const body = document.getElementById('laporan-table-body');
@@ -509,7 +529,6 @@
             lucide.createIcons();
         }
 
-        // MODALS & HELPERS
         function openSiswaModal(idx = null) {
             document.getElementById('siswa-modal').classList.replace('hidden', 'flex');
             if(idx !== null) {
@@ -536,10 +555,13 @@
         }
         function openSiswaModalById(sid) { const i = dataSiswa.findIndex(s => s.id === sid); if(i !== -1) openSiswaModal(i); }
         function handleDeleteSiswa(sid) { if(confirm("Hapus siswa?")) { dataSiswa = dataSiswa.filter(s => s.id !== sid); localStorage.setItem('db_siswa', JSON.stringify(dataSiswa)); refreshAll(); } }
+        
         function updateKelasFilter() {
             const list = [...new Set(dataSiswa.map(s => s.kelas))].sort();
             document.getElementById('filter-kelas-unduh').innerHTML = '<option value="">Pilih...</option>' + list.map(k => `<option value="${k}">${k}</option>`).join('');
+            document.getElementById('select-print-kelas').innerHTML = '<option value="all">Semua Kelas</option>' + list.map(k => `<option value="${k}">${k}</option>`).join('');
         }
+
         function searchManualSiswa() {
             const q = document.getElementById('manual-search-input').value.toLowerCase();
             const res = document.getElementById('manual-search-results');
@@ -552,27 +574,20 @@
         function clearSelectedStudent() { selectedStudentId = ""; document.getElementById('selected-student-info').classList.add('hidden'); }
         function setManualStatus(st) { manualStatusSelected = st; document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white')); document.getElementById(`btn-${st}`).classList.add('bg-blue-600', 'text-white'); }
         function submitManualAttendance() { if(!selectedStudentId || !manualStatusSelected) return alert("Lengkapi!"); processAttendance(selectedStudentId, manualStatusSelected); clearSelectedStudent(); refreshAll(); }
+        
         function showPrintKelasModal() {
-            const select = document.getElementById('select-print-kelas');
-            const list = [...new Set(dataSiswa.map(s => s.kelas))].sort();
-            select.innerHTML = list.map(k => `<option value="${k}">${k}</option>`).join('');
             document.getElementById('print-kelas-modal').classList.replace('hidden', 'flex');
         }
         function closePrintKelasModal() { document.getElementById('print-kelas-modal').classList.replace('flex', 'hidden'); }
-        function executePrintKelas() { printLaporan('kelas', document.getElementById('select-print-kelas').value); closePrintKelasModal(); }
         
-        function downloadCSVTemplate() {
-            const csv = "data:text/csv;charset=utf-8,Nama,Kelas,ID Siswa\nBudi,7A,123";
-            const link = document.createElement("a"); link.setAttribute("href", encodeURI(csv)); link.setAttribute("download", "template.csv"); document.body.appendChild(link); link.click(); link.remove();
-        }
-        function importSiswaCSV(e) {
-            const file = e.target.files[0]; const reader = new FileReader();
-            reader.onload = (event) => {
-                const lines = event.target.result.split('\n');
-                lines.forEach((line, i) => { if (i === 0 || !line.trim()) return; const cols = line.split(','); if (cols.length >= 3) dataSiswa.push({ nama: cols[0].trim(), kelas: cols[1].trim(), id: cols[2].trim() }); });
-                localStorage.setItem('db_siswa', JSON.stringify(dataSiswa)); refreshAll();
-            };
-            reader.readAsText(file);
+        function executePrintLaporan() {
+            const rawDate = document.getElementById('select-print-date').value;
+            if(!rawDate) return alert("Pilih tanggal!");
+            const targetKelas = document.getElementById('select-print-kelas').value;
+            const d = new Date(rawDate);
+            const formattedDate = d.toLocaleDateString(); 
+            printLaporanFiltered(formattedDate, targetKelas);
+            closePrintKelasModal();
         }
 
         function printPersonalQR(sid) {
@@ -591,15 +606,42 @@
         }
 
         function printLaporan(type, val = null) {
-            let filtered = []; let title = ""; const todayStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             const today = new Date().toLocaleDateString();
-            if (type === 'all') { filtered = dataPresensi.filter(p => p.tanggal === today); title = "Laporan - " + todayStr; }
-            else if (type === 'kelas') { filtered = dataPresensi.filter(p => p.tanggal === today && p.kelas === val); title = "Kelas " + val + " - " + todayStr; }
-            else if (type === 'siswa') { filtered = dataPresensi.filter(p => p.id === val); title = "Riwayat Siswa"; }
-            if (filtered.length === 0) return alert("Kosong!");
+            if(type === 'all') printLaporanFiltered(today, 'all');
+            else if(type === 'siswa') printLaporanFiltered(null, 'siswa', val);
+        }
+
+        function printLaporanFiltered(dateStr, kelas, sid = null) {
+            let filtered = [];
+            let displayTitle = "Laporan Presensi";
+            if (sid) {
+                filtered = dataPresensi.filter(p => p.id === sid);
+                displayTitle = "Riwayat Presensi Siswa";
+            } else if (kelas === 'all') {
+                filtered = dataPresensi.filter(p => p.tanggal === dateStr);
+                displayTitle = "Laporan Semua Kelas - Tanggal " + dateStr;
+            } else {
+                filtered = dataPresensi.filter(p => p.tanggal === dateStr && p.kelas === kelas);
+                displayTitle = "Laporan Kelas " + kelas + " - Tanggal " + dateStr;
+            }
+            if (filtered.length === 0) return alert("Tidak ada data presensi untuk kriteria tersebut.");
             const win = window.open('', '_blank');
-            win.document.write(`<html><head><style>table{width:100%; border-collapse:collapse;} th,td{border:1px solid #ddd; padding:8px; text-align:left;} th{background:#f2f2f2;}</style></head><body><h2>${title}</h2><table><thead><tr><th>No</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Waktu</th></tr></thead><tbody>${filtered.map((p,i)=>`<tr><td>${i+1}</td><td>${p.nama}</td><td>${p.kelas}</td><td>${p.status}</td><td>${p.waktu}</td></tr>`).join('')}</tbody></table><script>window.print();<\/script></body></html>`);
+            win.document.write(`<html><head><title>Cetak Laporan</title><style>body{font-family:sans-serif; padding:20px;} table{width:100%; border-collapse:collapse; margin-top:20px;} th,td{border:1px solid #ddd; padding:10px; text-align:left; font-size:12px;} th{background:#f8f9fa;} h2{margin:0; font-size:18px;} .meta{margin-top:5px; color:#666; font-size:12px;}</style></head><body><h2>${displayTitle}</h2><p class="meta">Dicetak pada: ${new Date().toLocaleString('id-ID')}</p><table><thead><tr><th>No</th><th>Nama</th><th>Kelas</th><th>Status</th><th>Waktu</th><th>Tanggal</th></tr></thead><tbody>${filtered.map((p,i)=>`<tr><td>${i+1}</td><td>${p.nama}</td><td>${p.kelas}</td><td>${p.status}</td><td>${p.waktu}</td><td>${p.tanggal}</td></tr>`).join('')}</tbody></table><script>window.print();<\/script></body></html>`);
             win.document.close();
+        }
+
+        function downloadCSVTemplate() {
+            const csv = "data:text/csv;charset=utf-8,Nama,Kelas,ID Siswa\nBudi,7A,123";
+            const link = document.createElement("a"); link.setAttribute("href", encodeURI(csv)); link.setAttribute("download", "template.csv"); document.body.appendChild(link); link.click(); link.remove();
+        }
+        function importSiswaCSV(e) {
+            const file = e.target.files[0]; const reader = new FileReader();
+            reader.onload = (event) => {
+                const lines = event.target.result.split('\n');
+                lines.forEach((line, i) => { if (i === 0 || !line.trim()) return; const cols = line.split(','); if (cols.length >= 3) dataSiswa.push({ nama: cols[0].trim(), kelas: cols[1].trim(), id: cols[2].trim() }); });
+                localStorage.setItem('db_siswa', JSON.stringify(dataSiswa)); refreshAll();
+            };
+            reader.readAsText(file);
         }
     </script>
 </body>
